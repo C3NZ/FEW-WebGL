@@ -59,11 +59,43 @@
                 <p>A shader is a minimilistic program written using the OpenGL ES shading language. When passed information the vertices
                     that we would like to create, we're given back data that we can use</p>
                 <canvas id="glCanvasTwo" width="500" height="500"></canvas>
+                <p>Now we have a square, but where exactly did this come from? Looking on the code, you can see that there is a whole bunch of stuff going on. Let's break it down</p>
+                <p>First we create both the vertex shader and fragment shader programs as string. This is the GLSL that is going to be compiled to be ran on your GPU. Every time a new
+                    shape is rendered, the vertex shader program is going to convert it's input vertex coordinate system to the canvas' clipspace coordinate system that is used by WebGL.
+                    After this happens, the Fragment shader will be ran once on every single pixel that composes the shape (after the vertex shader is done) and give it it's color.</p>
+                <p>After creating both GLSL scripts, it's time to compile and link them. After the shader has been compiled, we can then initialize our shader program. Once we've done that
+                    we need to grab a bit more information about the shader attributes and their uniform locations, in specific where openGL placed them after we initialized our shader program.</p>
+                <p>Grabbing those, it is now time to initalize our buffer. The vertex buffer will contain the clipspace positions that need to rendered on screen. We create our buffer object and then
+                    bind it to webGLs ARRAY_BUFFER to then write a float array into it.</p>
+                <p>Houston, we're almost ready for lift off. Now it's time to render the scene. We create a perspective matrix and model matrix. The perspective matrix handles the camera's perspective
+                    and what you actually see, where the model matrix is what will be drawing to the screen. After making configurations to both matricies, we configure our uniform shaders and then render the
+                square to scene. WebGL is a lot of work for a simple square.</p>
+            </div>
+            <div class="learning thirdLearned">
+                <h2>Adding color to our square</h2>
+                <p>Our square is currently bland and white, so i'm going to try to learn more about coloring it.</p>
+                <canvas id="glCanvasThree" width="500" height="500"></canvas>
+                <p>With our render and init Buffer functions already being created, adding colors wasn't too bad. Since colors can be represented as a matrix, we first rewrite our initial
+                    init buffer function in order to have added color functionality. We create a new color buffer, bind it to webGLs array buffer, and then write the colors into it.</p>
+                <p>We also need to modify both our vertex and fragment shader programs to account for colors. We give our vertex shader a new attribute, and also a new variable of type varying assigned to this new attribute.
+                    varying allows us to pass information from the vertex shader into the fragment shader as far as i'm aware, and inside of our fragment shader we use the varying variable to assign it to the fragment color.
+                </p>
+                <p>We then proceed to update our programs information object to find the new color attribute, update our render function to tell it how to use the colors inside of the color buffer,
+                    and then draw to the screen!</p>
+            </div>
+            <div class="learning">
+                <h2>WebGL is hard, but amazing</h2>
+                <p>Following varying webgl tutorials, I found out that it's very hard. However, I'm determined to hopefully learn more. A lot of the content was a digest of mozillas tutorials and a ton
+                    of stack overflow questions put into a TLDR. However, even through all of the ups and downs, and trust me, there were a lot of downs,
+                    I plan to expand on this learning journey beyond the school project it currently is and learn more about WebGL.</p>
             </div>
         </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.7.1/gl-matrix-min.js"></script> 
         <script>
-        runFirstExample();
+        
+        /*
+            First example start
+        */
 
         function runFirstExample(){
             const canvas = document.getElementById('glCanvas');
@@ -78,6 +110,10 @@
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT)
         }
+
+        /*
+            Second example start
+        */
            
         function initShaderProgram(gl, vsSource, fsSource) {
             const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
@@ -116,7 +152,7 @@
             return shader;
         
         }
-   
+        
         function initBuffers(gl) {
 
           // Create a buffer for the square's positions.
@@ -256,11 +292,193 @@
             // Draw the scene
             renderScene(gl, programInfo, buffers);
         }
+        /*
+            Start third example
+        */
+        function initColoredBuffers(gl) {
+            //White, red, green, and blue in that order
+            //will be used to fill in points
+            const colors = [
+                1.0, 1.0, 1.0, 1.0,
+                1.0, 0.0, 0.0, 1.0,
+                0.0, 1.0, 0.0, 1.0,
+                0.0, 0.0, 1.0, 1.0
+            ]
+            
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+            // Create a buffer for the square's positions.
+            const positionBuffer = gl.createBuffer();
+
+            //bind the buffer to GLs array buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // Now create an array of positions for the square.
+
+            const positions = [
+                1.0,  1.0,
+                -1.0,  1.0,
+                1.0, -1.0,
+                -1.0, -1.0,
+            ];
+
+            //Fill the buffer with the positions that we have created
+            gl.bufferData(gl.ARRAY_BUFFER,
+                        new Float32Array(positions),
+                        gl.STATIC_DRAW);
+
+            return {
+                position: positionBuffer,
+                color: colorBuffer
+            };
+        }
+
+        function renderColoredScene(gl, programInfo, buffers) {            
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);  
+            gl.clearDepth(1.0);                 
+            gl.enable(gl.DEPTH_TEST);         
+            gl.depthFunc(gl.LEQUAL);            
+
+            // Clear the canvas before we start drawing on it.
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            const fieldOfView = 45 * Math.PI / 180;   // in radians
+            const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+            const zNear = 0.1;
+            const zFar = 100.0;
+            const projectionMatrix = mat4.create();
+
+            mat4.perspective(projectionMatrix,
+                           fieldOfView,
+                           aspect,
+                           zNear,
+                           zFar);
+
+            const modelViewMatrix = mat4.create();
 
 
+            mat4.translate(modelViewMatrix,    
+                         modelViewMatrix,    
+                         [-0.0, 0.0, -6.0]);  
+            {
+                const numComponents = 2;
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexPosition,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(
+                    programInfo.attribLocations.vertexPosition);
+            }
+
+            {
+                const numComponents = 4;
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+                gl.vertexAttribPointer(
+                        programInfo.attribLocations.vertexColor,
+                        numComponents,
+                        type,
+                        normalize,
+                        stride,
+                        offset);
+                gl.enableVertexAttribArray(
+                        programInfo.attribLocations.vertexColor);
+            }
+       
+
+            gl.useProgram(programInfo.program);
+
+            //Create the shader uniforms
+            gl.uniformMatrix4fv(
+                  programInfo.uniformLocations.projectionMatrix,
+                  false,
+                  projectionMatrix);
+            gl.uniformMatrix4fv(
+                  programInfo.uniformLocations.modelViewMatrix,
+                  false,
+                  modelViewMatrix);
+
+              {
+                const offset = 0;
+                const vertexCount = 4;
+                gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
+              }
+        }
+
+        
+        function runThirdExample(){
+            const canvas = document.getElementById('glCanvasThree')
+            const gl = canvas.getContext('webgl');
+
+            if (!gl) {
+                alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+                return;
+            }
+
+            // Vertex shader program
+            const vsSource = `
+                attribute vec4 aVertexPosition;
+                attribute vec4 aVertexColor;
+
+                uniform mat4 uModelViewMatrix;
+                uniform mat4 uProjectionMatrix;
+                
+                varying lowp vec4 vColor;
+
+                void main() {
+                    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+                    vColor = aVertexColor; 
+                }
+            `;
+
+            // Fragment shader program
+            const fsSource = `
+                varying lowp vec4 vColor;
+
+                void main() {
+                 gl_FragColor = vColor;
+                }
+            `;
+
+            // Initialize the shader program;
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                    vertexColor: gl.getAttribLocation(shaderProgram,'aVertexColor')
+                },
+                uniformLocations: {
+                    projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                    modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                },
+              };
+
+            //Initialize the buffers that we'll be using
+            const buffers = initColoredBuffers(gl);
+
+            // Draw the scene
+            renderColoredScene(gl, programInfo, buffers);
+        }
+
+    
+        runFirstExample();
         runSecondExample();
-
-   
+        runThirdExample();
     </script>
     </body>
 
