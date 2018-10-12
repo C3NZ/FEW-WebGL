@@ -1,0 +1,267 @@
+<!DOCTYPE html> 
+<html>
+    <head>
+        <title>WebGL tutorial</title>
+    </head>
+    <style>
+        body {
+            font-family: arial;
+            font-size: 12px;
+            width: 100%;
+        }
+            
+        h1 {
+            font-size: 5em;
+        }
+        .container {
+            text-align: center;
+            width: 60%;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .learning {
+            width: 100%;
+            text-align: center;
+        }
+    
+        .learning h2 {
+            font-size: 3.5em;
+        }
+
+        .learning p {
+            text-align: center;
+            font-size: 2em;
+        }
+    </style>
+    <body>
+        <div class="container">
+            <h1><u>Learning WebGL through practice</u></h1>
+            <div class="learning firstLearned">
+                <h2>WebGL and WebGL contexts</h2>
+                <p>Hey, welcome to what I learned about webGL! What is that though?</p>
+                <p>Web Graphics library is a javascript API for rendering interactive 2D and 3D graphics within
+                    any compatible browser</p>
+                <p>So let's get started</p>
+                <canvas id="glCanvas" width="500" height="500"></canvas>
+                <p>Uhhhh, so what the hell just is this^?</p>
+                <p>To go along with what I'm about to go over, view source and scroll all the way to the bottom of the HTML file.
+                    We first grabbed the canvas we created by id and then tried to initialize an OpenGL context. (Used for rendering)
+                    We then checked to see if this context was created, if it wasn't then canvas.getContext() will return null. If the context 
+                    was successfully created, we then proceed to set the clear screen color to black and then clear the screen with it.
+            </div>
+            <div class="learning secondLearned">
+                <h2>2D rendering</h2>
+                <p>In order to render 2D images on to the canvas, we're going to have to understand what's going on.</p>
+                <p>Although we're creating 2D images, we're still drawing them on 3D space. In order to create regions of space that will
+                    create these 2D images, we're going to have to use shaders.</p>
+                <p>A shader is a minimilistic program written using the OpenGL ES shading language. When passed information the vertices
+                    that we would like to create, we're given back data that we can use</p>
+                <canvas id="glCanvasTwo" width="500" height="500"></canvas>
+            </div>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.7.1/gl-matrix-min.js"></script> 
+        <script>
+        runFirstExample();
+
+        function runFirstExample(){
+            const canvas = document.getElementById('glCanvas');
+            const gl = canvas.getContext("webgl");
+            
+            if(gl === null){
+                alert('Was not able to initialize WebGL. Your browser is most likely not compatible');
+                return;
+            }
+            
+            //Set the clear color to black, and then clear the canvas with it
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT)
+        }
+           
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            // Create the shader program
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            // If creating the shader program failed, alert the user that it did so
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+
+            // Send the source to the shader object
+            gl.shaderSource(shader, source);
+
+            // Compile the shader program
+            gl.compileShader(shader);
+
+            // Make sure the shader compiled correctly
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        
+        }
+   
+        function initBuffers(gl) {
+
+          // Create a buffer for the square's positions.
+          const positionBuffer = gl.createBuffer();
+
+          //bind the buffer to GLs array buffer
+          gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+          // Now create an array of positions for the square.
+
+          const positions = [
+             1.0,  1.0,
+            -1.0,  1.0,
+             1.0, -1.0,
+            -1.0, -1.0,
+          ];
+
+          //Fill the buffer with the positions that we have created
+          gl.bufferData(gl.ARRAY_BUFFER,
+                        new Float32Array(positions),
+                        gl.STATIC_DRAW);
+
+          return {
+            position: positionBuffer,
+          };
+        }
+
+        function renderScene(gl, programInfo, buffers) {            
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);  
+            gl.clearDepth(1.0);                 
+            gl.enable(gl.DEPTH_TEST);         
+            gl.depthFunc(gl.LEQUAL);            
+
+            // Clear the canvas before we start drawing on it.
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            const fieldOfView = 45 * Math.PI / 180;   // in radians
+            const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+            const zNear = 0.1;
+            const zFar = 100.0;
+            const projectionMatrix = mat4.create();
+
+            mat4.perspective(projectionMatrix,
+                           fieldOfView,
+                           aspect,
+                           zNear,
+                           zFar);
+
+            const modelViewMatrix = mat4.create();
+
+
+            mat4.translate(modelViewMatrix,    
+                         modelViewMatrix,    
+                         [-0.0, 0.0, -6.0]);  
+            {
+                const numComponents = 2;
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexPosition,
+                    numComponents,
+                    type,
+                    normalize,
+                    stride,
+                    offset);
+                gl.enableVertexAttribArray(
+                    programInfo.attribLocations.vertexPosition);
+            }
+
+            gl.useProgram(programInfo.program);
+
+            //Create the shader uniforms
+            gl.uniformMatrix4fv(
+                  programInfo.uniformLocations.projectionMatrix,
+                  false,
+                  projectionMatrix);
+            gl.uniformMatrix4fv(
+                  programInfo.uniformLocations.modelViewMatrix,
+                  false,
+                  modelViewMatrix);
+
+              {
+                const offset = 0;
+                const vertexCount = 4;
+                gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
+              }
+        }
+
+       function runSecondExample() {
+            const canvas = document.getElementById('glCanvasTwo')
+            const gl = canvas.getContext('webgl');
+
+            if (!gl) {
+                alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+                return;
+            }
+
+            // Vertex shader program
+            const vsSource = `
+                attribute vec4 aVertexPosition;
+
+                uniform mat4 uModelViewMatrix;
+                uniform mat4 uProjectionMatrix;
+
+                void main() {
+                  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+                }
+            `;
+
+            // Fragment shader program
+            const fsSource = `
+                void main() {
+                 gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                }
+            `;
+
+            // Initialize the shader program;
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+            const programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                },
+                uniformLocations: {
+                    projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                    modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                },
+              };
+
+            //Initialize the buffers that we'll be using
+            const buffers = initBuffers(gl);
+
+            // Draw the scene
+            renderScene(gl, programInfo, buffers);
+        }
+
+
+        runSecondExample();
+
+   
+    </script>
+    </body>
+
+</html>

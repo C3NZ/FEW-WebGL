@@ -1,0 +1,25 @@
+{
+  "name": "webgl",
+  "version": "1.0.0",
+  "description": "webGL playground",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/C3NZ/FEW-webGL.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/C3NZ/FEW-webGL/issues"
+  },
+  "homepage": "https://github.com/C3NZ/FEW-webGL#readme",
+  "dependencies": {
+    "express": "^4.16.3"
+  }
+}
